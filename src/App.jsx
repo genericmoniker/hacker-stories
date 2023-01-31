@@ -1,4 +1,5 @@
 import * as React from 'react';
+import axios from 'axios';
 
 // A custom hook that replicates state to local storage.
 const useStorageState = (key, initialState) => {
@@ -37,26 +38,38 @@ const App = () => {
   };
 
   const [searchTerm, setSearchTerm] = useStorageState('search', 'React');
+  const [url, setUrl] = React.useState(`${API_ENDPOINT}${searchTerm}`);
   const [stories, dispatchStories] = React.useReducer(storiesReducer,
     { data: [], isLoading: false, isError: false }
   );
 
-  // useEffect to hook into the lifecycle of the component.
-  React.useEffect(() => {
-    // If there is no search term, then don't do anything.
-    if (!searchTerm) return;
+  const handleSearchInput = (event) => {
+    setSearchTerm(event.target.value);
+  };
 
+  const handleSearchSubmit = (event) => {
+    setUrl(`${API_ENDPOINT}${searchTerm}`);
+  };
+
+  // useCallback creates a memoized version of the callback that only changes
+  // if one of the dependencies (searchTerm here) has changed.
+  const handleFetchStories = React.useCallback(async () => {
     dispatchStories({ type: 'STORIES_FETCH_INIT' });
-    fetch(`${API_ENDPOINT} ${searchTerm}`).then((response) => response.json())
-    .then((result) => {
+    try {
+      const result = await axios.get(url);
       dispatchStories({
         type: 'STORIES_FETCH_SUCCESS',
-        payload: result.hits,
+        payload: result.data.hits,
       });
-    }).catch(() =>
-      dispatchStories({ type: 'STORIES_FETCH_FAILURE' })
-    );
-  }, [searchTerm]); // Empty array would mean run once when component first renders.
+    } catch {
+      dispatchStories({ type: 'STORIES_FETCH_FAILURE' });
+    }
+  }, [url]);
+
+  // useEffect to hook into the lifecycle of the component.
+  React.useEffect(() => {
+    handleFetchStories();
+  }, [handleFetchStories]); // call the function when the memoized callback changes.
 
   const handleRemoveStory = (item) => {
     dispatchStories({
@@ -76,10 +89,16 @@ const App = () => {
         id="search"
         value={searchTerm}
         isFocused
-        onInputChange={handleSearch}
+        onInputChange={handleSearchInput}
       >
         <strong>Search:</strong>
       </InputWithLabel>
+      <button
+        type="button"
+        disabled={!searchTerm}
+        onClick={handleSearchSubmit} >
+        Submit
+      </button>
       <hr />
       {stories.isError && <p>Something went wrong...</p>}
       {stories.isLoading ? (
