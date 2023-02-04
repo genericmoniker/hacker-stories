@@ -49,6 +49,9 @@ const App = () => {
 
   const handleSearchSubmit = (event) => {
     setUrl(`${API_ENDPOINT}${searchTerm}`);
+
+    // Avoid the browser reloading the page.
+    event.preventDefault();
   };
 
   // useCallback creates a memoized version of the callback that only changes
@@ -85,28 +88,46 @@ const App = () => {
   return (
     <div>
       <h1>My Hacker Stories</h1>
+      <SearchForm
+        searchTerm={searchTerm}
+        onSearchInput={handleSearchInput}
+        onSearchSubmit={handleSearchSubmit}
+      />
+
+      <hr />
+
+      {stories.isError && <p>Something went wrong...</p>}
+      {
+        stories.isLoading ? (
+          <p>Loading...</p>
+        ) : (
+          <List list={stories.data} onRemoveItem={handleRemoveStory} />
+        )
+      }
+    </div >
+  );
+}
+
+
+const SearchForm = ({
+  searchTerm,
+  onSearchInput,
+  onSearchSubmit,
+}) => {
+  return (
+    <form onSubmit={onSearchSubmit}>
       <InputWithLabel
         id="search"
         value={searchTerm}
         isFocused
-        onInputChange={handleSearchInput}
+        onInputChange={onSearchInput}
       >
         <strong>Search:</strong>
       </InputWithLabel>
-      <button
-        type="button"
-        disabled={!searchTerm}
-        onClick={handleSearchSubmit} >
+      <button type="submit" disabled={!searchTerm}>
         Submit
       </button>
-      <hr />
-      {stories.isError && <p>Something went wrong...</p>}
-      {stories.isLoading ? (
-        <p>Loading...</p>
-      ) : (
-        <List list={stories.data} onRemoveItem={handleRemoveStory} />
-      )}
-    </div>
+    </form>
   );
 }
 
